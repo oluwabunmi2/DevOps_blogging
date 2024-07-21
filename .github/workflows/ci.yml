@@ -1,0 +1,37 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main  # Change this to your main branch name if different
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '14'  # Change to your Node.js version
+      - run: npm install
+      - run: npm run lint
+      - run: npm test
+      - name: Build Docker Image
+        run: docker build -t oluwabunmi11/DevOps_blogging:latest .
+      - name: Log in to Docker Hub
+        run: echo ${{ secrets.DOCKER_HUB_PASSWORD }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+      - name: Push Docker Image
+        run: docker push oluwabunmi11/DevOps_blogging:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Deploy to DigitalOcean
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_API_TOKEN }}" \
+          -d '{"name":"my-droplet","region":"nyc3","size":"s-1vcpu-1gb","image":"docker-18-04"}' \
+          "https://api.digitalocean.com/v2/droplets"
